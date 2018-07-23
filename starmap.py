@@ -7,8 +7,8 @@ import argparse
 PI = 3.141592
 
 #Stars declination and hour data file "Yale Bright Star Catalog 5"
-file = "ybsc5.txt"
-# file2 = "stardata.txt"
+file = "datafiles/ybsc5.txt"
+file2 = "datafiles/stardata.txt"
 
 background_color = "rgb(45,59,98)"
 line_color = "rgb(255,255,255)"
