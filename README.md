@@ -30,7 +30,7 @@ python starmap.py -h
 ## Example
 python starmap.py -coord 60.186,24.959 -time 12.00.00 -date 01.01.2000 -utc +2
 
-![image](https://github.com/skeletor-git/starmap-svg/blob/master/example/starmap.png)
+![image](https://github.com/skeletor-git/starmap-svg/blob/master/example/bitmap.png)
 
 ## Info
 #Stars declination and hour data file "Yale Bright Star Catalog 5"
