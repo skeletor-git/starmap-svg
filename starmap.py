@@ -8,7 +8,8 @@ import argparse
 
 PI = 3.141592
 
-font_style = "font-size:10px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:5;font-weight:bold;"
+font_style = "font-size:10px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:4;"
+font_style2 = "font-size:8px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:3;"
 
 background_color = "rgb(45,59,98)"
 line_color = "rgb(255,255,255)"
@@ -18,16 +19,17 @@ output_file = 'starmap.svg'
 #Date & Time
 date = '01.01.2000' 
 time = '12.00'
-utc = 0
+utc = 2
 summertime = False
 
 #Coordinates
 coord = "60.186,24.959"
-coord = "52.00,1.0"
 
+fullview = False
+guides = True
 
 #placetext for leftdown corner
-info = 'HELSINKI NIGHT SKY'
+info = 'HELSINKI'
 
 #Size of poster in mm
 width = 200
@@ -38,7 +40,7 @@ def mm_to_px(mm):
 	return px
 
 #Smaller the star bigger the magnitude
-magnitude_limit = 3.5
+magnitude_limit = 6
 aperture = 0.4 
 amplification = width*0.045
 
@@ -65,7 +67,7 @@ parser = argparse.ArgumentParser(description='Generate starmap svg file')
 parser.add_argument('-coord','--coord', help='coordinates in format northern,eastern',default=coord )
 parser.add_argument('-time','--time', help='time in format hour.minute.second',default=time)
 parser.add_argument('-date','--date', help='date in format day.month.year', default=date)
-parser.add_argument('-utc','--utc',nargs='?', help='utc of your coord -12 to +12', type=int , default=utc)
+parser.add_argument('-utc','--utc',nargs='?', help='utc of your location -12 to +12', type=int , default=utc)
 
 parser.add_argument('-o','--output', help='output filename.svg',default='starmap.svg' )
 parser.add_argument('-width','--width',nargs='?', help='width in mm',type=int, default=width)
@@ -140,7 +142,7 @@ def date_and_time_to_rad(date,time):
 	if(summertime):
 		minutes -= 60
 	#UTC
-	minutes += 60*utc
+	minutes -= 60*utc +5*60
 
 	#TODO yearly mistake epoch
 	#Epoch J2000 12.00
@@ -148,30 +150,30 @@ def date_and_time_to_rad(date,time):
 	#calculatr degree from years -EPOCH 2000 year
 	degree = -(year-2000)*360/26000
 	
-	print(degree)
+	print(degree,year)
 	#calculate degree from days
 	degree -= (days)*360.0/days_in_year
-	print(degree)
+	print(degree,days)
 	#calculate degree from minutes -EPOCH 12 hour
 	degree -= ((minutes-12*60)*360/(24*60-4)) % 360
-	print(degree)
+	print(degree,minutes)
 
 	return math.radians(degree)
 
 
-########## POSITION CALCULATION  ###########################################
+########## GEOMETRY CALCULATION  ###########################################
 
 #change polar coordinates to cartesian coordinates
 def polar_to_cartesian(radius,angle,centerx,centery):
 	return [centerx + radius*math.cos(angle), centery + radius*math.sin(angle)]
 
 
-def distance_between(north,east,dec_angle,ra_angle):
+def angle_between(north,east,dec_angle,ra_angle):
 	delta_ra = ra_angle - east
 	rad = math.acos(math.cos(delta_ra)*math.cos(north)*math.cos(dec_angle) + math.sin(north)*math.sin(dec_angle))
 	return rad 
 
-def hours_to_decimal(ra):
+def hours_to_decimal(ra):##use this for ybsc5
 
 	seconds  = float(ra[0:2])*3600 		#hour
 	seconds += float(ra[2:4])*60	  	#minute
@@ -179,58 +181,63 @@ def hours_to_decimal(ra):
 	return seconds/(3600.0)
 
 def right_ascension_to_rad(ra):
-
 	return PI * 2.0 * ra / 24.0
 
 def declination_to_rad(dec):
-
     return math.radians(float(dec))
 
-def rad_to_xy(north,east, dec_angle, ra_angle):
-    delta_ra = ra_angle-east
-    x = math.cos(dec_angle) * math.sin(delta_ra)
-    y = math.sin(dec_angle) * math.cos(north) - math.cos(dec_angle) * math.cos(delta_ra) * math.sin(north)
-    return x * 300 ,y * 300
 
+########## PROJECTIONS  ######################################################
 
+def stereographic(latitude0,longitude0, latitude, longitude, R):
+	#http://mathworld.wolfram.com/StereographicProjection.html
 
+	# global fullview 
+	# fullview = True
+	k = (2*R)/( 1 + math.sin(latitude0)*math.sin(latitude) + math.cos(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0))
+	x = k * math.cos(latitude) * math.sin(longitude-longitude0)
+	y = k * (math.cos(latitude0)*math.sin(latitude) - math.sin(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0))
+
+	return x,y
 
 ########## STAR AND GUIDE GENERATION  ########################################
 
-def generate_guides(northern_N,eastern_E):
-
-	N = math.radians(northern_N)
-	E = math.radians(eastern_E)
-
-
-	draw_guides = []
-	for angle_test in range(0,240):
-		for decl_test in range(-3,3):
-			draw_guides.append([decl_test*30,angle_test/10.0])
-	for angle_test in range(0,24):
-		for decl_test in range(-160,160):
-			draw_guides.append([decl_test/2.0,angle_test])
-
-	for line in draw_guides:
-
-		declination = declination_to_rad(line[0])
-		ascension = right_ascension_to_rad(line[1])
-		
-		#magnitude of dot
-		magn = 1.1
-		radius = distance_between(N,E,declination,ascension)
-		x,y = rad_to_xy(N,E,declination,ascension)
-
-		if (radius < (90*PI/180.0)):
-			dot_generator(half_x-x,half_y-y,magn*aperture,line_color)
-
 def generate_starmap(northern_N,eastern_E,date,time):
 
-	
 	N = math.radians(northern_N)
 	E = math.radians(eastern_E)
 
 	raddatetime = date_and_time_to_rad(date,time)
+
+	if(guides is True):
+		draw_guides = []
+		for angle_test in range(0,360):
+			for decl_test in range(-3,3):
+				draw_guides.append([decl_test*30,angle_test/10.0])
+
+		for angle_test in range(0,24):
+			for decl_test in range(-160,160):
+				draw_guides.append([decl_test/2.0,angle_test])
+
+		for line in draw_guides:
+
+			ascension = right_ascension_to_rad(line[1])+raddatetime
+			declination = declination_to_rad(line[0])
+
+
+			#magnitude of dot
+			magn = 1.1
+			angle_from_viewpoint = angle_between(N,E,declination,ascension)
+			
+			x,y = stereographic(N,E, declination, ascension, width-50)
+
+			if ((angle_from_viewpoint < math.radians(90)) or fullview):
+
+				dot_generator(half_x-x,half_y-y,magn*aperture,line_color)
+				# if(line[0] == 30 and line[1] % 1 == 0):
+				# 	image.add(image.text(str(line[1]), insert=(half_x-x,half_y-y), fill=line_color, style=font_style2))
+
+
 
 	for line in data:
 		if(float(line[2]) < magnitude_limit):
@@ -240,33 +247,29 @@ def generate_starmap(northern_N,eastern_E,date,time):
 			ascension = right_ascension_to_rad(float(line[0]))+raddatetime
 			declination = declination_to_rad(line[1])
 
-			x,y = rad_to_xy(N,E,declination,ascension)
-			radius = distance_between(N,E,declination,ascension)
+			x,y = stereographic(N,E, declination, ascension, width-50)
+
+			angle_from_viewpoint = angle_between(N,E,declination,ascension)
 
 			#magnitude of star
 			magn = float(line[2])
 			# print magn
-			magn = 6 - 2.5*math.log(2+magn,10)
+
+			magn = magnitude_limit-magn+1
 
 
-			if (radius < 90*PI/180.0):
+			if ((angle_from_viewpoint < math.radians(90)) or fullview):
 				if (magn < 3):
-					dot_generator(half_x-x,half_y-y,0.4*aperture,line_color)
+					dot_generator(half_x-x,half_y-y,0.4*aperture*magn,line_color)
 				else:
 					star_generator(half_x-x,half_y-y,magn*aperture,line_color)
 
-				#North Star 
-				if(declination > 89.1*PI/180.0):
-				 	star_generator(half_x-x,half_y-y,magn*aperture,"red")
-
 				if len(line) > 3:
-					image.add(image.text('x', insert=(half_x-x,half_y-y), fill=line_color, style=font_style))
+					image.add(image.text('o', insert=(half_x-x,half_y-y), fill=line_color, style=font_style2))
 
 
 
-
-
-########## MAIN FUNCTION  ###########################################
+########## GENERATE SVG  ###########################################
 
 
 if __name__ == '__main__':
@@ -281,9 +284,7 @@ if __name__ == '__main__':
 
 	#Background
 	image.add(image.rect(insert=(0, 0),size=('100%', '100%'), rx=None, ry=None, fill=background_color))
-	
-	#draw guides
-	generate_guides(northern,eastern)
+
 	#Stars generation
 	generate_starmap(northern,eastern,date,time)
 
@@ -291,7 +292,7 @@ if __name__ == '__main__':
 
 	image.add(image.text(info, insert=("20mm", str(height-21)+'mm'), fill=line_color, style=font_style))
 	image.add(image.text(str(northern)+" N "+str(eastern)+" E " , insert=("20mm", str(height-17)+'mm'), fill=line_color, style=font_style))
-	image.add(image.text(date +" "+ time, insert=("20mm", str(height-13)+'mm'), fill=line_color, style=font_style))
+	image.add(image.text(date +" "+ time+ " UTC " + str(utc), insert=("20mm", str(height-13)+'mm'), fill=line_color, style=font_style))
 
 
 	image.save()

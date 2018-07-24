@@ -2,27 +2,38 @@
 for generating svg starmaps from selected coordinates and time 
 
 ## Requirements 
-	Python > 3.2 
-	pip3 install svgwrite
+Python > 3.2 
+pip3 install svgwrite
 
 ## Usage
-	python -coord [northern,eastern] -time [hour.minute.second] -date [day.month.year] -utc [utc]
+python starmap.py -h
 
-	optional parameters
-		-o = starmap.svg. Output file name
-		-width = 200. Width in mm
-		-height = 200. Height in mm
-		-magnitudelimit = 4.5.Magnitude limit is from 0-7.0. 0 is brightest, 7.0 dimmest
-		-backgroundcolor = rgb(45,59,98).  rgb(r,g,b)
-		-starcolor = rgb(255,255,255), rgb(r,g,b)
-		-infotext = HELSINKI NIGHT SKY, Text that is displayed in the corner of the image
+-h, --help            show this help message and exit
+
+-coord COORD, --coord COORD
+                    coordinates in format northern,eastern
+-time TIME, --time TIME
+                    time in format hour.minute.second
+-date DATE, --date DATE
+                    date in format day.month.year
+-utc [UTC], --utc [UTC]
+                    utc of your location -12 to +12
+-o OUTPUT, --output OUTPUT
+                    output filename.svg
+-width [WIDTH], --width [WIDTH]
+                    width in mm
+-height [HEIGHT], --height [HEIGHT]
+                    height in mm
+-magn [MAGN], --magn [MAGN]
+                    magnitude limit
 
 ## Example
-	 python starmap.py -coord 45.28,11.08 -time 12.30.30 -date 12.01.2011 -utc +2
+python starmap.py -coord 60.186,24.959 -time 12.00.00 -date 01.01.2000 -utc +2
 
+![image](https://github.com/skeletor-git/starmap-svg/blob/master/example/starmap.png)
 
 ## Info
-	#Stars declination and hour data file "Yale Bright Star Catalog 5"
+#Stars declination and hour data file "Yale Bright Star Catalog 5"
 
 ## TODO
-	Planets and Moon implementations
+Planets and Moon implementations
