@@ -10,7 +10,7 @@ for generating svg starmaps from selected coordinates and time
 
 	optional arguments:
 	  -h, --help            show this help message and exit
-	  
+
 	  -coord COORD, --coord COORD
 	                        coordinates in format northern,eastern
 	  -time TIME, --time TIME
@@ -47,7 +47,9 @@ for generating svg starmaps from selected coordinates and time
 
 
 ## Info
-	Stars declination and hour data file "Yale Bright Star Catalog 5"
+
+Stars data: "Yale Bright Star Catalog ver5"
+http://tdc-www.harvard.edu/catalogs/bsc5.html
 
 ## TODO
-	Planets and Moon implementations
+	Planets and Moon orbits, Automated summertime.
