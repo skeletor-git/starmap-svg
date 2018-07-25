@@ -9,7 +9,7 @@ import argparse
 PI = 3.141592
 
 font_style = "font-size:10px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:4;"
-font_style2 = "font-size:8px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:3;"
+font_style2 = "font-size:2px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:2;"
 
 background_color = "rgb(45,59,98)"
 line_color = "rgb(255,255,255)"
@@ -26,8 +26,8 @@ summertime = False
 coord = "60.186,24.959"
 
 fullview = False
-guides = True
-
+guides = False
+constellation = False
 #placetext for leftdown corner
 info = 'HELSINKI'
 
@@ -35,31 +35,65 @@ info = 'HELSINKI'
 width = 200
 height = 200
 
+#empty space in left and right of the starmap
+borders = 50
+
 def mm_to_px(mm):
 	px = mm*96/25.4
 	return px
 
 #Smaller the star bigger the magnitude
-magnitude_limit = 6
+magnitude_limit = 6.5
 aperture = 0.4 
-amplification = width*0.045
 
 ############ STARDATAFILE ################################################
 
 #Stars declination and hour data file "Yale Bright Star Catalog 5"
-file = "datafiles/ybsc5.txt"
-file = "datafiles/stardata.txt"
+file1 = "datafiles/ybsc5.txt"
+file2 = "datafiles/extradata.txt"
 
-#read data from file to nested list
-def read_star_coordinate_file(file):
-	data = []
-	with open(file, 'rt') as f:
+def hours_to_decimal(ra):##use this for ybsc5
+	
+	seconds  = float(ra[0:2])*60*60 	#hour
+	seconds += float(ra[3:5])*60	#minute
+	seconds += float(ra[5:7])		#seconds
+	degree = seconds*360/(24*60*60)
+	return degree
+
+data = []
+
+def read_ybsc5():
+	global data
+	with open(file1, 'rt') as f:
+		for line in f:
+			#RA,DEC,mag,constellation
+
+			if line[75:83].isspace() is False:
+				ra = line[75:77]+'.'+line[77:81]
+				ra = hours_to_decimal(ra)
+				dec = float(line[83:86]+'.'+line[87:90])
+				mag = float(line[103:107])
+				constellation = line[11:14]
+				greek = line[7:10]
+				data.append([ra,dec,mag,constellation,greek])
+				
+
+
+def read_extra_star_coordinate_file():
+	global data
+	with open(file2, 'rt') as f:
 		for line in f:
 			if (',' in line): 
-				data.append([ n for n in line.strip().split(',')])
-	return data
+				tmp = ([ n for n in line.strip().split(',')])
+				if float(tmp[2]) > 6.5:
+					tmp[0] = hours_to_decimal(tmp[0])
+					data.append([float(tmp[0]), float(tmp[1]), tmp[2], " "," "])
 
-data = read_star_coordinate_file(file)
+read_ybsc5()
+read_extra_star_coordinate_file()
+
+
+
 
 ############ ARGPARSER ###################################################
 
@@ -68,11 +102,15 @@ parser.add_argument('-coord','--coord', help='coordinates in format northern,eas
 parser.add_argument('-time','--time', help='time in format hour.minute.second',default=time)
 parser.add_argument('-date','--date', help='date in format day.month.year', default=date)
 parser.add_argument('-utc','--utc',nargs='?', help='utc of your location -12 to +12', type=int , default=utc)
+parser.add_argument('-magn','--magn',nargs='?', help='magnitude limit 0.1-10.0',type=float, default=magnitude_limit)
 
+parser.add_argument('-guides','--guides',nargs='?', help='draw guides True/False',type=bool, default=guides )
+parser.add_argument('-const','--const',nargs='?', help='show constellation names True/False',type=bool, default=constellation )
 parser.add_argument('-o','--output', help='output filename.svg',default='starmap.svg' )
 parser.add_argument('-width','--width',nargs='?', help='width in mm',type=int, default=width)
 parser.add_argument('-height','--height',nargs='?', help='height in mm',type=int, default=height)
-parser.add_argument('-magn','--magn',nargs='?', help='magnitude limit',type=int, default=magnitude_limit)
+parser.add_argument('-info','--info', help='Info text example eame of the place', default=info )
+
 
 args = parser.parse_args()
 
@@ -80,15 +118,18 @@ coord = args.coord
 time = args.time
 date = args.date
 utc = args.utc
-
+info = args.info
 output_file = args.output
+guides = args.guides
+magnitude_limit = args.magn
+constellation = args.const
 
 height = args.height
 width = args.width
 
-print(coord)
-print(date)
-print(time)
+print("coordinates:",coord)
+print("date:",date)
+print("time",time)
 
 northern,eastern = map(float,coord.split(','))
 
@@ -173,15 +214,9 @@ def angle_between(north,east,dec_angle,ra_angle):
 	rad = math.acos(math.cos(delta_ra)*math.cos(north)*math.cos(dec_angle) + math.sin(north)*math.sin(dec_angle))
 	return rad 
 
-def hours_to_decimal(ra):##use this for ybsc5
-
-	seconds  = float(ra[0:2])*3600 		#hour
-	seconds += float(ra[2:4])*60	  	#minute
-	seconds += float(ra[4:6])		  	#seconds
-	return seconds/(3600.0)
-
 def right_ascension_to_rad(ra):
-	return PI * 2.0 * ra / 24.0
+	return math.radians(float(ra))
+	# return PI * 2.0 * ra / 24.0
 
 def declination_to_rad(dec):
     return math.radians(float(dec))
@@ -191,9 +226,6 @@ def declination_to_rad(dec):
 
 def stereographic(latitude0,longitude0, latitude, longitude, R):
 	#http://mathworld.wolfram.com/StereographicProjection.html
-
-	# global fullview 
-	# fullview = True
 	k = (2*R)/( 1 + math.sin(latitude0)*math.sin(latitude) + math.cos(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0))
 	x = k * math.cos(latitude) * math.sin(longitude-longitude0)
 	y = k * (math.cos(latitude0)*math.sin(latitude) - math.sin(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0))
@@ -211,13 +243,14 @@ def generate_starmap(northern_N,eastern_E,date,time):
 
 	if(guides is True):
 		draw_guides = []
-		for angle_test in range(0,360):
-			for decl_test in range(-3,3):
-				draw_guides.append([decl_test*30,angle_test/10.0])
+		
+		for degrees in range(-3,3):
+			for lines in range(0,360):
+				draw_guides.append([degrees*30,lines])
 
-		for angle_test in range(0,24):
-			for decl_test in range(-160,160):
-				draw_guides.append([decl_test/2.0,angle_test])
+		for hours in range(0,24):
+			for lines in range(-160,160):
+				draw_guides.append([lines/2.0,hours/24*360])
 
 		for line in draw_guides:
 
@@ -229,43 +262,46 @@ def generate_starmap(northern_N,eastern_E,date,time):
 			magn = 1.1
 			angle_from_viewpoint = angle_between(N,E,declination,ascension)
 			
-			x,y = stereographic(N,E, declination, ascension, width-50)
+			x,y = stereographic(N,E, declination, ascension, width-(width/5))
 
-			if ((angle_from_viewpoint < math.radians(90)) or fullview):
-
+			if ((angle_from_viewpoint <= math.radians(89)) or fullview):
 				dot_generator(half_x-x,half_y-y,magn*aperture,line_color)
 				# if(line[0] == 30 and line[1] % 1 == 0):
 				# 	image.add(image.text(str(line[1]), insert=(half_x-x,half_y-y), fill=line_color, style=font_style2))
 
-
-
+	counter = 0
 	for line in data:
 		if(float(line[2]) < magnitude_limit):
 
 			#star position from datafile
 			# ascension = right_ascension_to_rad(hours_to_decimal(line[0]))
-			ascension = right_ascension_to_rad(float(line[0]))+raddatetime
+			ascension = right_ascension_to_rad(line[0])+raddatetime
 			declination = declination_to_rad(line[1])
 
-			x,y = stereographic(N,E, declination, ascension, width-50)
+			x,y = stereographic(N,E, declination, ascension, width-(width/5))
 
 			angle_from_viewpoint = angle_between(N,E,declination,ascension)
 
 			#magnitude of star
 			magn = float(line[2])
-			# print magn
 
-			magn = magnitude_limit-magn+1
+			if(magn > 7.0):
+				magn = 7.0
+			brightness = 8-magn
 
 
-			if ((angle_from_viewpoint < math.radians(90)) or fullview):
-				if (magn < 3):
-					dot_generator(half_x-x,half_y-y,0.4*aperture*magn,line_color)
+			if ((angle_from_viewpoint <= math.radians(90)) or fullview):
+				if (brightness < 2):
+					dot_generator(half_x-x,half_y-y,brightness*aperture,line_color)
 				else:
-					star_generator(half_x-x,half_y-y,magn*aperture,line_color)
+					star_generator(half_x-x,half_y-y,brightness*aperture,line_color)
 
-				if len(line) > 3:
-					image.add(image.text('o', insert=(half_x-x,half_y-y), fill=line_color, style=font_style2))
+				if(constellation is True):
+					if(line[4].isspace() is False and magn < 3):
+						image.add(image.text(line[3]+ " " +line[4] , insert=(half_x-x+3,half_y-y+3), fill=line_color, style=font_style2))
+			counter += 1
+			if counter %1000 == 0:
+				print(counter)
 
 
 
@@ -277,8 +313,6 @@ if __name__ == '__main__':
 	half_x = mm_to_px(width/2)
 	half_y = mm_to_px(height/2)
 
-	# weekday(date,'fi')
-
 	#Svgfile 
 	image = svgwrite.Drawing(output_file,size=(str(width)+'mm',str(height)+'mm'))
 
@@ -289,11 +323,9 @@ if __name__ == '__main__':
 	generate_starmap(northern,eastern,date,time)
 
 	#Text in bottom corner
-
 	image.add(image.text(info, insert=("20mm", str(height-21)+'mm'), fill=line_color, style=font_style))
 	image.add(image.text(str(northern)+" N "+str(eastern)+" E " , insert=("20mm", str(height-17)+'mm'), fill=line_color, style=font_style))
 	image.add(image.text(date +" "+ time+ " UTC " + str(utc), insert=("20mm", str(height-13)+'mm'), fill=line_color, style=font_style))
-
 
 	image.save()
 	print(output_file ," generated")

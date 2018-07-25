@@ -8,29 +8,43 @@ for generating svg starmaps from selected coordinates and time
 ## Usage
 	python starmap.py -h
 
-	-h, --help            show this help message and exit
+	optional arguments:
+	  -h, --help            show this help message and exit
+	  
+	  -coord COORD, --coord COORD
+	                        coordinates in format northern,eastern
+	  -time TIME, --time TIME
+	                        time in format hour.minute.second
+	  -date DATE, --date DATE
+	                        date in format day.month.year
+	  -utc [UTC], --utc [UTC]
+	                        utc of your location -12 to +12
+	  -magn [MAGN], --magn [MAGN]
+	                        magnitude limit 0.1-10.0
+	  -guides [GUIDES], --guides [GUIDES]
+	                        draw guides True/False
+	  -const [CONST], --const [CONST]
+	                        show constellation names True/False
+	  -o OUTPUT, --output OUTPUT
+	                        output filename.svg
+	  -width [WIDTH], --width [WIDTH]
+	                        width in mm
+	  -height [HEIGHT], --height [HEIGHT]
+	                        height in mm
+	  -info INFO, --info INFO
+	                        Info text example eame of the place
 
-	-coord COORD, --coord COORD
-	                    coordinates in format northern,eastern
-	-time TIME, --time TIME
-	                    time in format hour.minute.second
-	-date DATE, --date DATE
-	                    date in format day.month.year
-	-utc [UTC], --utc [UTC]
-	                    utc of your location -12 to +12
-	-o OUTPUT, --output OUTPUT
-	                    output filename.svg
-	-width [WIDTH], --width [WIDTH]
-	                    width in mm
-	-height [HEIGHT], --height [HEIGHT]
-	                    height in mm
-	-magn [MAGN], --magn [MAGN]
-	                    magnitude limit
 
-## Example
-	python starmap.py -coord 60.186,24.959 -time 12.00.00 -date 01.01.2000 -utc +2
+## Example 1
+	python starmap.py -coord 60.186,24.959 -time 12.00.00 -date 01.01.2000 -utc +2 -const True
 
-![image](https://github.com/skeletor-git/starmap-svg/blob/master/example/bitmap.png)
+![image](https://github.com/skeletor-git/starmap-svg/blob/master/example/starmap.png)
+
+## Example 2
+	python starmap.py -coord 35.684,139.728 -time 20.00.00 -date 15.07.2018 -utc +9 -info TOKYO -guides True -magn 10.0 -width 150 -height 220
+
+![image](https://github.com/skeletor-git/starmap-svg/blob/master/example/starmap2.png)
+
 
 ## Info
 	Stars declination and hour data file "Yale Bright Star Catalog 5"
