@@ -24,7 +24,7 @@ for generating svg starmaps from selected coordinates and time
 	  -guides [GUIDES], --guides [GUIDES]
 	                        draw guides True/False
 	  -const [CONST], --const [CONST]
-	                        show constellation names True/False
+	                        show constellation True/False
 	  -o OUTPUT, --output OUTPUT
 	                        output filename.svg
 	  -width [WIDTH], --width [WIDTH]
