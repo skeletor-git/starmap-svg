@@ -6,8 +6,6 @@ import argparse
 
 ############ DEFAULT VALUES AND CONSTS ####################################
 
-PI = 3.141592
-
 font_style = "font-size:10px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:4;"
 font_style2 = "font-size:2px; letter-spacing:0.7px; font-family:sans-serif; stroke-width:2;"
 
@@ -20,7 +18,7 @@ output_file = 'starmap.svg'
 
 #Date & Time
 date = '01.01.2000' 
-time = '12.00'
+time = '12.00.00'
 utc = 2
 summertime = False
 
@@ -30,6 +28,7 @@ coord = "60.186,24.959"
 fullview = False
 guides = False
 constellation = False
+
 #placetext for leftdown corner
 info = 'HELSINKI'
 
@@ -118,8 +117,9 @@ parser.add_argument('-date','--date', help='date in format day.month.year', defa
 parser.add_argument('-utc','--utc',nargs='?', help='utc of your location -12 to +12', type=int , default=utc)
 parser.add_argument('-magn','--magn',nargs='?', help='magnitude limit 0.1-12.0',type=float, default=magnitude_limit)
 
+parser.add_argument('-summertime','--summertime',nargs='?', help='if it is summertime on the date of the starchart',type=bool, default=summertime)
 parser.add_argument('-guides','--guides',nargs='?', help='draw guides True/False',type=bool, default=guides )
-parser.add_argument('-const','--const',nargs='?', help='show constellation True/False',type=bool, default=constellation )
+parser.add_argument('-constellation','--constellation',nargs='?', help='show constellation True/False',type=bool, default=constellation )
 parser.add_argument('-o','--output', help='output filename.svg',default='starmap.svg' )
 parser.add_argument('-width','--width',nargs='?', help='width in mm',type=int, default=width)
 parser.add_argument('-height','--height',nargs='?', help='height in mm',type=int, default=height)
@@ -136,7 +136,8 @@ info = args.info
 output_file = args.output
 guides = args.guides
 magnitude_limit = args.magn
-constellation = args.const
+constellation = args.constellation
+summertime = args.summertime
 
 height = args.height
 width = args.width
@@ -156,7 +157,7 @@ def draw_star(x,y,mag,color):
 	# randomize the number of points in star
 	points = random.randint(4,8)
 	points = points * 2
-	angle = 2*PI/(points)
+	angle = 2*math.pi/(points)
 
 	# generate the path
 	path = []
@@ -183,38 +184,46 @@ def draw_line(x0,y0,x1,y1,color):
 #date to days
 def date_and_time_to_rad(date,time):
 
-	days_in_year = 365 # days in normal year
+	#J2000 Epoch 01.01.2000 12.00.00
+	epochyear = 2000.0
+	epochhour = 12.0
+
+	calculation_mistake = -5.1
+
+	days_in_year = 365.2425
 	months = [31,28,31,30,31,30,31,31,30,31,30,31] #Array of days in months
 
 	year = int(date[6:10])
-	#Leap year
-	if(year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)):
-		months[1] = 29 
-		days_in_year = 366
+	month  = int(date[3:5])
+	day    = int(date[0:2])
+	hour   = float(time[0:2])
+	minute = float(time[3:5])
+	second = float(time[6:8])
 
-	days  = sum(months[0:int(date[3:5])-1])	#month to days
-	days += int(date[0:2])-1				#days
+	#years to days
+	daycounter = (year-epochyear)*days_in_year
+	#month to days
+	daycounter  += sum(months[0:month-1])	
+	#days
+	daycounter += day-1				
 
-	minutes  = float(time[0:2])*60  		#hour
-	minutes += float(time[3:5])	  			#minute
+	secondcounter  = (hour- epochhour+ calculation_mistake)*60*60
+	secondcounter  += minute*60
+	secondcounter += second			
 	
 	#Summertime
 	if(summertime):
-		minutes -= 60
+		secondcounter -= (60*60)
+	
 	#UTC
-	minutes -= 60*utc +5*60
+	secondcounter -= (60*60*utc)
 
-	#TODO yearly mistake epoch
-	#Epoch J2000 12.00
-
-	#calculate degree from years -EPOCH 2000 year
-	degree = -(year-2000)*360/26000
 
 	#calculate degree from days
-	degree -= (days)*360.0/days_in_year
+	degree = -((daycounter)*360.0/days_in_year) % 360
 
-	#calculate degree from minutes -EPOCH 12 hour
-	degree -= ((minutes-12*60)*360/(24*60-4)) % 360
+	#calculate degree from seconds
+	degree -= ((secondcounter)*360/(24*60*60)) % 360
 
 	return math.radians(degree)
 
@@ -233,7 +242,6 @@ def angle_between(north,east,dec_angle,ra_angle):
 
 def right_ascension_to_rad(ra):
 	return math.radians(float(ra))
-	# return PI * 2.0 * ra / 24.0
 
 def declination_to_rad(dec):
     return math.radians(float(dec))
@@ -282,7 +290,7 @@ def generate_starmap(northern_N,eastern_E,date,time):
 			brightness = 1.1
 
 			angle_from_viewpoint = angle_between(N,E,declination,ascension)
-			x,y = stereographic(N,E, declination, ascension, width-(width/5))
+			x,y = stereographic(N,E, declination, ascension, width-(borders))
 
 			#draw guides inside half sphere
 			if ((angle_from_viewpoint <= math.radians(89)) or fullview):
@@ -297,7 +305,7 @@ def generate_starmap(northern_N,eastern_E,date,time):
 			ascension = right_ascension_to_rad(line[0])+raddatetime
 			declination = declination_to_rad(line[1])
 
-			x,y = stereographic(N,E, declination, ascension, width-(width/5))
+			x,y = stereographic(N,E, declination, ascension, width-(borders))
 
 			angle_from_viewpoint = angle_between(N,E,declination,ascension)
 
@@ -331,11 +339,11 @@ def generate_constellations(northern_N,eastern_E,date,time):
 	for line in constellation_lines:
 		ascension0 = right_ascension_to_rad(line[1])+raddatetime
 		declination0 = declination_to_rad(line[2])
-		x0,y0 = stereographic(N,E, declination0, ascension0, width-(width/5))
+		x0,y0 = stereographic(N,E, declination0, ascension0, width-(borders))
 
 		ascension1 = right_ascension_to_rad(line[3])+raddatetime
 		declination1 = declination_to_rad(line[4])
-		x1,y1 = stereographic(N,E, declination1, ascension1, width-(width/5))
+		x1,y1 = stereographic(N,E, declination1, ascension1, width-(borders))
 
 		angle_from_viewpoint1 = angle_between(N,E,declination0,ascension0)
 		angle_from_viewpoint2 = angle_between(N,E,declination1,ascension1)
