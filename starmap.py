@@ -47,6 +47,9 @@ def mm_to_px(mm):
 magnitude_limit = 6.5
 aperture = 0.4 
 
+half_x = mm_to_px(width/2)
+half_y = mm_to_px(height/2)
+
 ############ STARDATAFILE ################################################
 
 #Stars declination and hour data file "Yale Bright Star Catalog 5"
@@ -354,16 +357,13 @@ def generate_constellations(northern_N,eastern_E,date,time):
 ########## GENERATE SVG  ###########################################
 
 
-if __name__ == '__main__':
-
+def main():
 	read_ybsc5()
 	read_extra_star_coordinate_file()
 	read_constellation_file()
 
-	half_x = mm_to_px(width/2)
-	half_y = mm_to_px(height/2)
-
-	#Svgfile 
+	#Svgfile
+	global image 
 	image = svgwrite.Drawing(output_file,size=(str(width)+'mm',str(height)+'mm'))
 
 	#Background
@@ -382,3 +382,6 @@ if __name__ == '__main__':
 	image.save()
 	print(output_file ," generated")
 
+
+if __name__ == '__main__':
+	main()
