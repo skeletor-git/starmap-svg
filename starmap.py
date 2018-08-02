@@ -47,6 +47,8 @@ def mm_to_px(mm):
 magnitude_limit = 6.5
 aperture = 0.4 
 
+projection_string = 'stereographic'
+
 ############ STARDATAFILE ################################################
 
 #Stars declination and hour data file "Yale Bright Star Catalog 5"
@@ -116,6 +118,7 @@ parser.add_argument('-time','--time', help='time in format hour.minute.second',d
 parser.add_argument('-date','--date', help='date in format day.month.year', default=date)
 parser.add_argument('-utc','--utc',nargs='?', help='utc of your location -12 to +12', type=int , default=utc)
 parser.add_argument('-magn','--magn',nargs='?', help='magnitude limit 0.1-12.0',type=float, default=magnitude_limit)
+parser.add_argument('-proj','--proj', help='projection: stereographic, lambert, gnomonic', default=projection_string)
 
 parser.add_argument('-summertime','--summertime',nargs='?', help='if it is summertime on the date of the starchart',type=bool, default=summertime)
 parser.add_argument('-guides','--guides',nargs='?', help='draw guides True/False',type=bool, default=guides )
@@ -138,7 +141,7 @@ guides = args.guides
 magnitude_limit = args.magn
 constellation = args.constellation
 summertime = args.summertime
-
+projection_string = args.proj
 height = args.height
 width = args.width
 
@@ -257,6 +260,31 @@ def stereographic(latitude0,longitude0, latitude, longitude, R):
 
 	return x,y
 
+def lambert_azimuthal(latitude0,longitude0, latitude, longitude, R):
+	#http://mathworld.wolfram.com/LambertAzimuthalEqual-AreaProjection.html
+	k = math.sqrt((2)/( 1 + math.sin(latitude0)*math.sin(latitude) + math.cos(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0)))
+	x = k * math.cos(latitude) * math.sin(longitude-longitude0)
+	y = k * (math.cos(latitude0)*math.sin(latitude) - math.sin(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0))
+
+	return 1.5*R*x,1.5*R*y
+
+def gnomonic(latitude0,longitude0, latitude, longitude, R):
+	#http://mathworld.wolfram.com/GnomonicProjection.htmll
+	c = math.sin(latitude0)*math.sin(latitude) + (math.cos(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0))
+	x = math.cos(latitude) * math.sin(longitude-longitude0)/math.cos(c)
+	y = (math.cos(latitude0)*math.sin(latitude) - math.sin(latitude0)*math.cos(latitude)*math.cos(longitude-longitude0))/math.cos(c)
+
+	return 2*R*x,2*R*y
+
+def projection(latitude0,longitude0, latitude, longitude, R, projection):
+	if(projection == 'stereographic'):
+		return stereographic(latitude0,longitude0, latitude, longitude, R)
+	if(projection == 'lambert'):
+		return lambert_azimuthal(latitude0,longitude0, latitude, longitude, R)
+	if(projection == 'gnomonic'):
+		return gnomonic(latitude0,longitude0, latitude, longitude, R)
+
+
 ########## STAR AND GUIDE GENERATION  ########################################
 
 def generate_starmap(northern_N,eastern_E,date,time):
@@ -290,7 +318,7 @@ def generate_starmap(northern_N,eastern_E,date,time):
 			brightness = 1.1
 
 			angle_from_viewpoint = angle_between(N,E,declination,ascension)
-			x,y = stereographic(N,E, declination, ascension, width-(borders))
+			x,y = projection(N,E, declination, ascension, width-(borders),projection_string)
 
 			#draw guides inside half sphere
 			if ((angle_from_viewpoint <= math.radians(89)) or fullview):
@@ -305,7 +333,7 @@ def generate_starmap(northern_N,eastern_E,date,time):
 			ascension = right_ascension_to_rad(line[0])+raddatetime
 			declination = declination_to_rad(line[1])
 
-			x,y = stereographic(N,E, declination, ascension, width-(borders))
+			x,y = projection(N,E, declination, ascension, width-(borders),projection_string)
 
 			angle_from_viewpoint = angle_between(N,E,declination,ascension)
 
@@ -339,11 +367,11 @@ def generate_constellations(northern_N,eastern_E,date,time):
 	for line in constellation_lines:
 		ascension0 = right_ascension_to_rad(line[1])+raddatetime
 		declination0 = declination_to_rad(line[2])
-		x0,y0 = stereographic(N,E, declination0, ascension0, width-(borders))
+		x0,y0 = projection(N,E, declination0, ascension0, width-(borders),projection_string)
 
 		ascension1 = right_ascension_to_rad(line[3])+raddatetime
 		declination1 = declination_to_rad(line[4])
-		x1,y1 = stereographic(N,E, declination1, ascension1, width-(borders))
+		x1,y1 = projection(N,E, declination1, ascension1, width-(borders),projection_string)
 
 		angle_from_viewpoint1 = angle_between(N,E,declination0,ascension0)
 		angle_from_viewpoint2 = angle_between(N,E,declination1,ascension1)
