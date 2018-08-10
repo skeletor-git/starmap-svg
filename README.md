@@ -56,4 +56,4 @@ Stars data: "Yale Bright Star Catalog ver5"
 http://tdc-www.harvard.edu/catalogs/bsc5.html
 
 ## TODO
-	Planets and Moon orbits, Automated summertime.
+	Planets and Moon orbits
